@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -5,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../core/craft_hub_theme.dart';
 import '../../core/project_tech_stack.dart';
 import '../../providers/auth_controller.dart';
+import '../../services/realtime_sync_bus.dart';
 import '../../widgets/craft_hub_ui.dart';
 import '../projects/project_detail_screen.dart';
 
@@ -21,15 +24,22 @@ class _ExploreTabState extends State<ExploreTab> {
   String? _cursor;
   bool _loading = true;
   bool _loadingMore = false;
+  StreamSubscription<Map<String, dynamic>>? _syncSubscription;
 
   @override
   void initState() {
     super.initState();
     _fetch();
+    _syncSubscription = RealtimeSyncBus.events.listen((event) {
+      if (event['entity'] == 'project' || event['entity'] == 'workspace') {
+        _fetch();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _syncSubscription?.cancel();
     _controller.dispose();
     super.dispose();
   }

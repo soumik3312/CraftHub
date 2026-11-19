@@ -9,6 +9,7 @@ import '../core/craft_hub_theme.dart';
 import '../providers/app_settings_controller.dart';
 import '../providers/auth_controller.dart';
 import '../services/local_notification_service.dart';
+import '../services/realtime_sync_bus.dart';
 import '../widgets/craft_hub_ui.dart';
 import 'collab/collab_tab.dart';
 import 'explore/explore_tab.dart';
@@ -27,7 +28,7 @@ class HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<HomeShell> {
-  static const Duration _chatRefreshInterval = Duration(seconds: 7);
+  static const Duration _chatRefreshInterval = Duration(seconds: 90);
   int _index = 0;
   int _chatBadgeCount = 0;
   Timer? _badgeTimer;
@@ -74,7 +75,9 @@ class _HomeShellState extends State<HomeShell> {
       _refreshChatBadge();
     }
 
+    socket.on('sync_event', RealtimeSyncBus.emit);
     socket.on('message_notification', (raw) {
+      RealtimeSyncBus.emit({'entity': 'message'});
       refresh(raw);
       _handleRealtimeNotification(raw);
     });

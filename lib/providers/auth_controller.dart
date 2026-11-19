@@ -121,6 +121,80 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  /// Verifies Google with Craft Hub, without changing the app authentication
+  /// state. The caller must show the normal Create Account form next.
+  Future<GoogleRegistrationStartResult> startGoogleRegistration(
+    String idToken,
+  ) async {
+    try {
+      final data = await api.startGoogleRegistration(idToken: idToken);
+      final profile = data['profile'];
+      final token = data['registrationToken'] as String?;
+      if (profile is! Map || token == null || token.isEmpty) {
+        return const GoogleRegistrationStartResult(
+          error: 'Unexpected server response while starting Google registration.',
+        );
+      }
+      final email = profile['email']?.toString() ?? '';
+      if (email.isEmpty) {
+        return const GoogleRegistrationStartResult(
+          error: 'Google did not return a verified email address.',
+        );
+      }
+      return GoogleRegistrationStartResult(
+        pending: PendingGoogleRegistration(
+          registrationToken: token,
+          name: profile['name']?.toString() ?? '',
+          email: email,
+        ),
+      );
+    } on DioException catch (e) {
+      return GoogleRegistrationStartResult(error: _dioMsg(e));
+    }
+  }
+
+  /// Completes the same profile form used by email registration, then applies
+  /// the normal Craft Hub JWT returned by the backend. No OTP is involved.
+  Future<String?> completeGoogleRegistration({
+    required PendingGoogleRegistration pending,
+    required String password,
+    required String name,
+    required String username,
+    String bio = '',
+    List<String> genres = const [],
+  }) async {
+    _error = null;
+    notifyListeners();
+    try {
+      final data = await api.completeGoogleRegistration(
+        registrationToken: pending.registrationToken,
+        password: password,
+        name: name,
+        username: username,
+        bio: bio,
+        genres: genres,
+      );
+      await _applyTokenResponse(data);
+      return null;
+    } on DioException catch (e) {
+      return _dioMsg(e);
+    }
+  }
+
+  /// Google is merely the identity proof; successful sessions remain Craft Hub
+  /// JWT sessions and are stored exactly like password-login sessions.
+  Future<String?> loginWithGoogle(String idToken) async {
+    _error = null;
+    notifyListeners();
+    try {
+      final data = await api.loginWithGoogle(idToken: idToken);
+      await _applyTokenResponse(data);
+      return null;
+    } on DioException catch (e) {
+      return _dioMsg(e);
+    }
+  }
+
   Future<String?> verifyRegisterOtp({required String email, required String code}) async {
     try {
       final data = await api.verifyRegister(email: email, code: code.trim());

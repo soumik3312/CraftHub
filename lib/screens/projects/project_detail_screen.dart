@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -11,6 +12,7 @@ import '../../core/craft_hub_theme.dart';
 import '../../core/project_tech_stack.dart';
 import '../../core/url_utils.dart';
 import '../../providers/auth_controller.dart';
+import '../../services/realtime_sync_bus.dart';
 import '../../widgets/craft_hub_ui.dart';
 import '../../widgets/user_avatar.dart';
 import '../collab/send_project_invite_sheet.dart';
@@ -42,15 +44,24 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   String _lastWorkspaceAutoCreateKey = '';
   final PageController _coverController = PageController();
   int _coverIndex = 0;
+  StreamSubscription<Map<String, dynamic>>? _syncSubscription;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _syncSubscription = RealtimeSyncBus.events.listen((event) {
+      final entity = event['entity'];
+      if ((entity == 'project' || entity == 'workspace') &&
+          (event['id'] == widget.projectId || entity == 'workspace')) {
+        _load();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _syncSubscription?.cancel();
     _coverController.dispose();
     super.dispose();
   }

@@ -33,3 +33,26 @@ class RegisterFlowResult {
 
   bool get needsOtp => verifyEmail != null && error == null;
 }
+
+/// Returned after Google is verified server-side. This token is only for
+/// completing account registration; it is never an authenticated app session.
+class PendingGoogleRegistration {
+  const PendingGoogleRegistration({
+    required this.registrationToken,
+    required this.name,
+    required this.email,
+  });
+
+  final String registrationToken;
+  final String name;
+  final String email;
+}
+
+class GoogleRegistrationStartResult {
+  const GoogleRegistrationStartResult({this.error, this.pending});
+
+  final String? error;
+  final PendingGoogleRegistration? pending;
+
+  bool get isReady => error == null && pending != null;
+}

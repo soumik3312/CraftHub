@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -9,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/craft_hub_theme.dart';
 import '../../core/genres.dart';
 import '../../providers/auth_controller.dart';
+import '../../services/realtime_sync_bus.dart';
 import '../../widgets/craft_hub_ui.dart';
 import '../../widgets/user_avatar.dart';
 import '../posts/post_compose_screen.dart';
@@ -42,11 +44,23 @@ class _ProfileTabState extends State<ProfileTab> {
   int _following = 0;
   String _section = _projectsSection;
   bool _loading = true;
+  StreamSubscription<Map<String, dynamic>>? _syncSubscription;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _syncSubscription = RealtimeSyncBus.events.listen((event) {
+      if (['profile', 'settings', 'follow', 'post', 'project', 'workspace', 'collaboration'].contains(event['entity'])) {
+        _load();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _syncSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {

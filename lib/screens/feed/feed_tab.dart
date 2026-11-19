@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/craft_hub_theme.dart';
 import '../../providers/auth_controller.dart';
 import '../../services/craft_api.dart';
+import '../../services/realtime_sync_bus.dart';
 import '../../widgets/user_avatar.dart';
 import '../profile/user_profile_screen.dart';
 
@@ -20,11 +23,30 @@ class _FeedTabState extends State<FeedTab> {
   List<Map<String, dynamic>> _posts = [];
   List<Map<String, dynamic>> _suggestions = [];
   bool _loading = true;
+  Timer? _feedRefreshTimer;
+  StreamSubscription<Map<String, dynamic>>? _syncSubscription;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _syncSubscription = RealtimeSyncBus.events.listen((event) {
+      if (event['entity'] == 'post' || event['entity'] == 'follow') {
+        _refreshFeed();
+      }
+    });
+    // Slow recovery check for missed events after a temporary disconnect.
+    _feedRefreshTimer = Timer.periodic(
+      const Duration(seconds: 90),
+      (_) => _refreshFeed(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _feedRefreshTimer?.cancel();
+    _syncSubscription?.cancel();
+    super.dispose();
   }
 
   String _text(dynamic value, [String fallback = '']) {
@@ -81,6 +103,22 @@ class _FeedTabState extends State<FeedTab> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _refreshFeed() async {
+    if (!mounted) return;
+    try {
+      final data = await context.read<AuthController>().api.feedPosts();
+      if (!mounted) return;
+      setState(() {
+        _posts = (data['posts'] as List<dynamic>? ?? [])
+            .map(_map)
+            .where((entry) => entry.isNotEmpty)
+            .toList();
+      });
+    } catch (_) {
+      // Keep the current feed visible if the background refresh fails.
     }
   }
 

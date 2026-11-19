@@ -33,6 +33,24 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Local configuration and signing credentials. OAuth client IDs are public
+# identifiers, so do not put them in secret files unless the file has other
+# sensitive values.
+.env
+.env.*
+!.env.example
+!.env.*.example
+*-oauth-client-secret*.json
+*oauth-client-secret*.json
+*service-account*.json
+service-account*.json
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+**/key.properties
+
 # Symbolication related
 app.*.symbols
 

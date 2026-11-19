@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/craft_hub_theme.dart';
 import '../../providers/auth_controller.dart';
+import '../../services/realtime_sync_bus.dart';
 import '../../widgets/craft_hub_ui.dart';
 import '../../widgets/user_avatar.dart';
 import 'chat_room_screen.dart';
@@ -23,7 +24,7 @@ class ChatListScreen extends StatefulWidget {
 
 class _ChatListScreenState extends State<ChatListScreen>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
-  static const Duration _refreshInterval = Duration(seconds: 7);
+  static const Duration _refreshInterval = Duration(seconds: 90);
   List<dynamic> _list = [];
   int _unreadMessages = 0;
   bool _aiReady = false;
@@ -33,6 +34,7 @@ class _ChatListScreenState extends State<ChatListScreen>
   Timer? _refreshTimer;
   bool _refreshing = false;
   late TabController _controller;
+  StreamSubscription<Map<String, dynamic>>? _syncSubscription;
 
   @override
   void initState() {
@@ -43,6 +45,11 @@ class _ChatListScreenState extends State<ChatListScreen>
       if (mounted) setState(() {});
     });
     _load();
+    _syncSubscription = RealtimeSyncBus.events.listen((event) {
+      if (event['entity'] == 'message' || event['entity'] == 'collaboration') {
+        _load(silent: true);
+      }
+    });
     _refreshTimer = Timer.periodic(
       _refreshInterval,
       (_) => _load(silent: true),
@@ -53,6 +60,7 @@ class _ChatListScreenState extends State<ChatListScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _refreshTimer?.cancel();
+    _syncSubscription?.cancel();
     _controller.dispose();
     super.dispose();
   }

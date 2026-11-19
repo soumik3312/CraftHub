@@ -1,9 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/craft_hub_theme.dart';
 import '../../providers/auth_controller.dart';
+import '../../services/google_sign_in_service.dart';
 import '../../widgets/craft_hub_ui.dart';
+import '../../widgets/google_web_sign_in_button.dart';
 import 'otp_verify_screen.dart';
 import 'register_screen.dart';
 
@@ -50,6 +53,47 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       );
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      final idToken = await GoogleSignInService.interactiveIdToken();
+      await _signInWithGoogleIdToken(idToken, managesLoading: false);
+    } on GoogleSignInCancelled {
+      // Closing Google's chooser is a normal outcome.
+    } on GoogleSignInConfigurationException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Google sign-in failed. Please try again.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _signInWithGoogleFromWeb(String idToken) =>
+      _signInWithGoogleIdToken(idToken, managesLoading: true);
+
+  Future<void> _signInWithGoogleIdToken(
+    String idToken, {
+    required bool managesLoading,
+  }) async {
+    if (_loading && managesLoading) return;
+    if (managesLoading && mounted) setState(() => _loading = true);
+    try {
+      final error = await context.read<AuthController>().loginWithGoogle(idToken);
+      if (!mounted || error == null) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+    } finally {
+      if (managesLoading && mounted) setState(() => _loading = false);
     }
   }
 
@@ -169,13 +213,18 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () =>
-                                    _socialSoon('Google'),
-                                icon:
-                                    const Icon(Icons.alternate_email),
-                                label: const Text('Google'),
-                              ),
+                              child: kIsWeb
+                                  ? GoogleWebSignInButton(
+                                      busy: _loading,
+                                      onIdToken: _signInWithGoogleFromWeb,
+                                      onError: (message) => ScaffoldMessenger.of(context)
+                                          .showSnackBar(SnackBar(content: Text(message))),
+                                    )
+                                  : OutlinedButton.icon(
+                                      onPressed: _loading ? null : _signInWithGoogle,
+                                      icon: const Icon(Icons.g_mobiledata_rounded),
+                                      label: const Text('Google'),
+                                    ),
                             ),
                           ],
                         ),

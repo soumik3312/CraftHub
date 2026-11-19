@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/genres.dart';
 import '../../core/craft_hub_theme.dart';
 import '../../providers/auth_controller.dart';
+import '../../services/realtime_sync_bus.dart';
 import '../../widgets/craft_hub_ui.dart';
 import '../../widgets/user_avatar.dart';
 import '../profile/user_profile_screen.dart';
@@ -31,16 +34,23 @@ class _CollabTabState extends State<CollabTab>
   String _aiSummary = '';
   bool _aiScanning = false;
   bool _loading = true;
+  StreamSubscription<Map<String, dynamic>>? _syncSubscription;
 
   @override
   void initState() {
     super.initState();
     _controller = TabController(length: 4, vsync: this);
     _load();
+    _syncSubscription = RealtimeSyncBus.events.listen((event) {
+      if (event['entity'] == 'collaboration' || event['entity'] == 'project') {
+        _load();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _syncSubscription?.cancel();
     _controller.dispose();
     super.dispose();
   }

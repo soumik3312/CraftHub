@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 /// Backend base URL (no trailing slash).
 /// - Android emulator → `http://192.168.151.233:3000` reaches host machine’s localhost:3000
@@ -15,7 +15,10 @@ class ApiConfig {
 
   static String get baseUrl {
     if (fromEnv.isNotEmpty) return fromEnv.replaceAll(RegExp(r'/$'), '');
-    if (Platform.isAndroid) return 'https://crafthub-backend.onrender.com';
+    if (kIsWeb) return 'https://crafthub-backend.onrender.com';
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return 'https://crafthub-backend.onrender.com';
+    }
     return 'https://crafthub-backend.onrender.com';
   }
 }

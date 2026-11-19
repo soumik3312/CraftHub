@@ -90,6 +90,46 @@ class CraftApi {
     return res.data!;
   }
 
+  /// Verifies Google with the backend and returns only a short-lived pending
+  /// registration hand-off; it does not create a Craft Hub account or session.
+  Future<Json> startGoogleRegistration({required String idToken}) async {
+    final res = await _dio.post<Json>(
+      '/auth/google/register',
+      data: {'idToken': idToken},
+    );
+    return res.data!;
+  }
+
+  Future<Json> completeGoogleRegistration({
+    required String registrationToken,
+    required String password,
+    required String name,
+    required String username,
+    String bio = '',
+    List<String> genres = const [],
+  }) async {
+    final res = await _dio.post<Json>(
+      '/auth/google/complete-registration',
+      data: {
+        'registrationToken': registrationToken,
+        'password': password,
+        'name': name,
+        'username': username,
+        'bio': bio,
+        'genres': genres,
+      },
+    );
+    return res.data!;
+  }
+
+  Future<Json> loginWithGoogle({required String idToken}) async {
+    final res = await _dio.post<Json>(
+      '/auth/google/login',
+      data: {'idToken': idToken},
+    );
+    return res.data!;
+  }
+
   Future<Json> verifyRegister({
     required String email,
     required String code,
