@@ -133,8 +133,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       final idToken = await GoogleSignInService.interactiveIdToken();
       await _startGoogleRegistrationWithIdToken(idToken, managesLoading: false);
-    } on GoogleSignInCancelled {
-      // Account selection was dismissed; keep the form available without noise.
+    } on GoogleSignInCancelled catch (result) {
+      if (result.mayBeConfigurationIssue && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Google did not complete sign-up. If you selected an account, add this APK signing SHA-1 to the Android OAuth client, then rebuild the app.',
+            ),
+            duration: Duration(seconds: 8),
+          ),
+        );
+      }
     } on GoogleSignInConfigurationException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));

@@ -3,7 +3,11 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../core/google_auth_config.dart';
 
 class GoogleSignInCancelled implements Exception {
-  const GoogleSignInCancelled();
+  const GoogleSignInCancelled({this.mayBeConfigurationIssue = false});
+
+  /// Android Credential Manager can report a client/SHA mismatch as a generic
+  /// cancellation after the account picker has been shown.
+  final bool mayBeConfigurationIssue;
 }
 
 class GoogleSignInConfigurationException implements Exception {
@@ -66,10 +70,13 @@ class GoogleSignInService {
     } on GoogleSignInException catch (error) {
       if (error.code == GoogleSignInExceptionCode.canceled ||
           error.code == GoogleSignInExceptionCode.interrupted) {
-        throw const GoogleSignInCancelled();
+        throw const GoogleSignInCancelled(mayBeConfigurationIssue: true);
       }
+      final detail = error.description?.trim();
       throw GoogleSignInConfigurationException(
-        'Google sign-in failed. Check your Google OAuth configuration and try again.',
+        detail == null || detail.isEmpty
+            ? 'Google sign-in failed. Check your Google OAuth configuration and try again.'
+            : 'Google sign-in failed: $detail',
       );
     }
   }

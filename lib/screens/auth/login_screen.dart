@@ -62,8 +62,17 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final idToken = await GoogleSignInService.interactiveIdToken();
       await _signInWithGoogleIdToken(idToken, managesLoading: false);
-    } on GoogleSignInCancelled {
-      // Closing Google's chooser is a normal outcome.
+    } on GoogleSignInCancelled catch (result) {
+      if (result.mayBeConfigurationIssue && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Google did not complete sign-in. If you selected an account, add this APK signing SHA-1 to the Android OAuth client, then rebuild the app.',
+            ),
+            duration: Duration(seconds: 8),
+          ),
+        );
+      }
     } on GoogleSignInConfigurationException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
